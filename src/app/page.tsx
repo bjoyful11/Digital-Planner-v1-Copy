@@ -5,7 +5,7 @@ import { Calendar, Plus, Settings, Sun, Moon, Clock, Edit2, Trash2, Check, User 
 import { Task, Category } from "@/types";
 import { loadCategories, getCategoryColor, getCategoryIcon, getCategoryName, formatDate } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
-import { loadUserTasks, saveTask, updateTask, deleteTask, loadUserCategories, saveCategory, updateCategory, deleteCategory } from "@/lib/auth";
+import { loadUserTasks, saveTask, updateTask, deleteTask, loadUserCategories } from "@/lib/auth";
 import TaskForm from "@/components/forms/TaskForm";
 import TaskEditor from "@/components/forms/TaskEditor";
 import CategoryManager from "@/components/forms/CategoryManager";
@@ -23,7 +23,7 @@ export default function Home() {
   const [isCategoryManagerOpen, setIsCategoryManagerOpen] = useState(false);
   const [isCalendarViewOpen, setIsCalendarViewOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
 
   // Check for existing session on mount
@@ -347,7 +347,11 @@ export default function Home() {
                         </span>
                         <button
                           onClick={() => {
-                            const updatedTask = { ...task, completed: !task.completed };
+                            const updatedTask = new Task(task.name, task.date, task.time, task.importance, task.category, task.color, task.notes);
+                            updatedTask.id = task.id;
+                            updatedTask.completed = !task.completed;
+                            updatedTask.createdAt = task.createdAt;
+                            updatedTask.updatedAt = new Date();
                             handleUpdateTask(updatedTask);
                           }}
                           className="p-2 text-gray-500 hover:text-green-600 dark:text-gray-400 dark:hover:text-green-400 transition-colors"

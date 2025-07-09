@@ -7,7 +7,7 @@ import { supabase } from "@/lib/supabase";
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLogin: (user: any) => void;
+  onLogin: (user: { id: string; email?: string }) => void;
 }
 
 export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps) {
@@ -53,8 +53,9 @@ export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps
           onClose();
         }
       }
-    } catch (error: any) {
-      setError(error.message);
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

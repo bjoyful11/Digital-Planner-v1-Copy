@@ -1,11 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { User, LogOut, ChevronDown } from "lucide-react";
+import { LogOut, ChevronDown } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 interface UserMenuProps {
-  user: any;
+  user: { id: string; email?: string };
   onLogout: () => void;
 }
 
@@ -32,7 +32,7 @@ export default function UserMenu({ user, onLogout }: UserMenuProps) {
         className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
       >
         <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm font-medium">
-          {getUserInitials(user.email)}
+          {getUserInitials(user.email || '')}
         </div>
         <span className="text-sm text-gray-700 dark:text-gray-300 hidden sm:block">
           {user.email}

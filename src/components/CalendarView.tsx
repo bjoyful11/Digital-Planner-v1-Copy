@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { X, ChevronLeft, ChevronRight, Check, Edit2, Trash2, Calendar as CalendarIcon } from "lucide-react";
+import { useState } from "react";
+import { X, ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
 import { Task, Category } from "@/types";
-import { formatDate, getCategoryColor, getCategoryIcon, getCategoryName } from "@/lib/utils";
+import { getCategoryColor, getCategoryIcon } from "@/lib/utils";
 import TaskEditor from "@/components/forms/TaskEditor";
 
 interface CalendarViewProps {
@@ -24,7 +24,7 @@ export default function CalendarView({
   onDeleteTask 
 }: CalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [isTaskEditorOpen, setIsTaskEditorOpen] = useState(false);
 
@@ -77,12 +77,15 @@ export default function CalendarView({
   // Navigate to today
   const goToToday = () => {
     setCurrentDate(new Date());
-    setSelectedDate(new Date());
   };
 
   // Handle task completion toggle
   const toggleTaskCompletion = (task: Task) => {
-    const updatedTask = { ...task, completed: !task.completed };
+    const updatedTask = new Task(task.name, task.date, task.time, task.importance, task.category, task.color, task.notes);
+    updatedTask.id = task.id;
+    updatedTask.completed = !task.completed;
+    updatedTask.createdAt = task.createdAt;
+    updatedTask.updatedAt = new Date();
     onUpdateTask(updatedTask);
   };
 

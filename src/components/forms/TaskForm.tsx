@@ -63,12 +63,6 @@ export default function TaskForm({ isOpen, onClose, onAddTask, categories, defau
       // Use user's local time for both selected and current
       const now = new Date();
       const [inputHour, inputMinute] = formData.time.split(":").map(Number);
-      const selectedDateTime = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate(),
-        0, 0, 0, 0
-      );
       const formDateParts = formData.date.split("-").map(Number);
       const selectedDate = new Date(formDateParts[0], formDateParts[1] - 1, formDateParts[2], 0, 0, 0, 0);
       if (selectedDate < new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0)) {

@@ -21,13 +21,22 @@ export const loadUserTasks = async (userId: string): Promise<Task[]> => {
   }
 
   // Convert the raw data to proper Task objects with Date objects
-  return (data || []).map((task: any) => ({
-    ...task,
-    date: new Date(task.date),
-    createdAt: new Date(task.created_at),
-    updatedAt: new Date(task.updated_at),
-    notes: task.description || ''
-  }));
+  return (data || []).map((task: { [key: string]: any }) => {
+    const newTask = new Task(
+      task.name,
+      new Date(task.date),
+      task.time,
+      task.importance,
+      task.category,
+      task.color || '#6B7280',
+      task.description || ''
+    );
+    newTask.id = task.id;
+    newTask.completed = task.completed;
+    newTask.createdAt = new Date(task.created_at);
+    newTask.updatedAt = new Date(task.updated_at);
+    return newTask;
+  });
 };
 
 // Save task to Supabase
@@ -102,8 +111,12 @@ export const loadUserCategories = async (userId: string): Promise<Category[]> =>
   }
 
   // Convert the raw data to proper Category objects
-  return (data || []).map((category: any) => ({
-    ...category,
+  return (data || []).map((category: { [key: string]: any }) => ({
+    id: category.id,
+    name: category.name,
+    color: category.color,
+    icon: category.icon,
+    isDefault: category.is_default,
     createdAt: new Date(category.created_at)
   }));
 };

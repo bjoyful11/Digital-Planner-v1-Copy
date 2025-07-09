@@ -11,14 +11,10 @@ interface CategoryManagerProps {
   onClose: () => void;
   onCategoriesChange: (categories: Category[]) => void;
   categories: Category[];
-  user?: any;
+  user?: { id: string; email?: string } | null;
 }
 
-const defaultCategories = [
-  { id: 'school', name: 'School', icon: '📚', color: '#3B82F6' },
-  { id: 'work', name: 'Work', icon: '💼', color: '#10B981' },
-  { id: 'personal', name: 'Personal', icon: '👤', color: '#F59E0B' }
-];
+
 
 const iconOptions = [
   '📚', '💼', '👤', '🏠', '🏃', '🎵', '🎨', '📱', '💻', '📖', 
