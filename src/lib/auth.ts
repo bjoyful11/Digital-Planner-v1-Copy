@@ -21,20 +21,20 @@ export const loadUserTasks = async (userId: string): Promise<Task[]> => {
   }
 
   // Convert the raw data to proper Task objects with Date objects
-  return (data || []).map((task: { [key: string]: any }) => {
+  return (data || []).map((task: { [key: string]: unknown }) => {
     const newTask = new Task(
-      task.name,
-      new Date(task.date),
-      task.time,
-      task.importance,
-      task.category,
-      task.color || '#6B7280',
-      task.description || ''
+      task.name as string,
+      new Date(task.date as string),
+      task.time as string,
+      task.importance as number,
+      task.category as string,
+      (task.color as string) || '#6B7280',
+      (task.description as string) || ''
     );
-    newTask.id = task.id;
-    newTask.completed = task.completed;
-    newTask.createdAt = new Date(task.created_at);
-    newTask.updatedAt = new Date(task.updated_at);
+    newTask.id = task.id as string;
+    newTask.completed = task.completed as boolean;
+    newTask.createdAt = new Date(task.created_at as string);
+    newTask.updatedAt = new Date(task.updated_at as string);
     return newTask;
   });
 };
@@ -111,13 +111,13 @@ export const loadUserCategories = async (userId: string): Promise<Category[]> =>
   }
 
   // Convert the raw data to proper Category objects
-  return (data || []).map((category: { [key: string]: any }) => ({
-    id: category.id,
-    name: category.name,
-    color: category.color,
-    icon: category.icon,
-    isDefault: category.is_default,
-    createdAt: new Date(category.created_at)
+  return (data || []).map((category: { [key: string]: unknown }) => ({
+    id: category.id as string,
+    name: category.name as string,
+    color: category.color as string,
+    icon: category.icon as string,
+    isDefault: category.is_default as boolean,
+    createdAt: new Date(category.created_at as string)
   }));
 };
 

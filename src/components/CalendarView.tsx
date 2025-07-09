@@ -79,27 +79,10 @@ export default function CalendarView({
     setCurrentDate(new Date());
   };
 
-  // Handle task completion toggle
-  const toggleTaskCompletion = (task: Task) => {
-    const updatedTask = new Task(task.name, task.date, task.time, task.importance, task.category, task.color, task.notes);
-    updatedTask.id = task.id;
-    updatedTask.completed = !task.completed;
-    updatedTask.createdAt = task.createdAt;
-    updatedTask.updatedAt = new Date();
-    onUpdateTask(updatedTask);
-  };
-
   // Handle task editing
   const handleEditTask = (task: Task) => {
     setEditingTask(task);
     setIsTaskEditorOpen(true);
-  };
-
-  // Handle task deletion
-  const handleDeleteTask = (taskId: string) => {
-    if (window.confirm("Are you sure you want to delete this task?")) {
-      onDeleteTask(taskId);
-    }
   };
 
   // Get importance badge
