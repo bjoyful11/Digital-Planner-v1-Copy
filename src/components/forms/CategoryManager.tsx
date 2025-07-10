@@ -5,6 +5,18 @@ import { X, Plus, Edit2, Trash2, AlertCircle } from "lucide-react";
 import { Category } from "@/types";
 import { saveCategories } from "@/lib/utils";
 import { saveCategory, updateCategory, deleteCategory } from "@/lib/auth";
+import { z } from "zod";
+import DOMPurify from "dompurify";
+
+const categorySchema = z.object({
+  name: z.string().min(2, "Category name must be at least 2 characters").max(20),
+  icon: z.string().min(1, "Please select an icon"),
+  color: z.string().min(1, "Please select a color"),
+});
+
+function containsSuspiciousLink(text: string) {
+  return /https?:\/\//i.test(text);
+}
 
 interface CategoryManagerProps {
   isOpen: boolean;
@@ -60,53 +72,40 @@ export default function CategoryManager({
   }, [isOpen]);
 
   const validateCategory = (data: { name: string; icon: string; color: string }) => {
+    const result = categorySchema.safeParse(data);
     const newErrors: Record<string, string> = {};
-
-    if (!data.name.trim()) {
-      newErrors.name = "Category name is required";
-    } else if (data.name.trim().length < 2) {
-      newErrors.name = "Category name must be at least 2 characters";
-    } else if (data.name.trim().length > 20) {
-      newErrors.name = "Category name must be less than 20 characters";
+    if (!result.success) {
+      for (const err of result.error.errors) {
+        newErrors[err.path[0]] = err.message;
+      }
     }
-
-    if (!data.icon) {
-      newErrors.icon = "Please select an icon";
+    if (containsSuspiciousLink(data.name)) {
+      newErrors.name = "Links are not allowed in the category name.";
     }
-
-    if (!data.color) {
-      newErrors.color = "Please select a color";
-    }
-
     return newErrors;
   };
 
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     const newErrors = validateCategory(newCategory);
     setErrors(newErrors);
-
     if (Object.keys(newErrors).length === 0) {
-      // Check if name already exists
       const nameExists = categories.some(
         cat => cat.name.toLowerCase() === newCategory.name.trim().toLowerCase()
       );
-      
       if (nameExists) {
         setErrors({ name: "A category with this name already exists" });
         return;
       }
-
+      // Sanitize name
+      const sanitizedName = DOMPurify.sanitize(newCategory.name.trim());
       const category: Category = {
         id: `category_${Date.now()}`,
-        name: newCategory.name.trim(),
+        name: sanitizedName,
         icon: newCategory.icon,
         color: newCategory.color
       };
-
       const updatedCategories = [...categories, category];
-      
       if (user) {
         try {
           await saveCategory(category, user.id);
@@ -118,8 +117,6 @@ export default function CategoryManager({
         saveCategories(updatedCategories);
         onCategoriesChange(updatedCategories);
       }
-      
-      // Reset form
       setNewCategory({ name: '', icon: '📚', color: '#3B82F6' });
       setErrors({});
     }
@@ -127,35 +124,29 @@ export default function CategoryManager({
 
   const handleEditCategory = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!editingCategory) return;
-    
     const newErrors = validateCategory(editForm);
     setEditErrors(newErrors);
-
     if (Object.keys(newErrors).length === 0) {
-      // Check if name already exists (excluding the current category being edited)
       const nameExists = categories.some(
         cat => cat.id !== editingCategory.id && 
                cat.name.toLowerCase() === editForm.name.trim().toLowerCase()
       );
-      
       if (nameExists) {
         setEditErrors({ name: "A category with this name already exists" });
         return;
       }
-
+      // Sanitize name
+      const sanitizedName = DOMPurify.sanitize(editForm.name.trim());
       const updatedCategory: Category = {
         ...editingCategory,
-        name: editForm.name.trim(),
+        name: sanitizedName,
         icon: editForm.icon,
         color: editForm.color
       };
-
       const updatedCategories = categories.map(cat => 
         cat.id === editingCategory.id ? updatedCategory : cat
       );
-      
       if (user) {
         try {
           await updateCategory(updatedCategory, user.id);
@@ -167,8 +158,6 @@ export default function CategoryManager({
         saveCategories(updatedCategories);
         onCategoriesChange(updatedCategories);
       }
-      
-      // Reset edit form
       setEditingCategory(null);
       setEditErrors({});
     }

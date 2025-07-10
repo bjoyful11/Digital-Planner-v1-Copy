@@ -4,6 +4,21 @@ import { useState, useEffect } from "react";
 import { X, Calendar, Clock, AlertCircle } from "lucide-react";
 import { Task, Category } from "@/types";
 import { createDateFromString } from "@/lib/utils";
+import { z } from "zod";
+import DOMPurify from "dompurify";
+
+const taskSchema = z.object({
+  name: z.string().min(3, "Task name must be at least 3 characters").max(100),
+  date: z.string().min(1, "Date is required"),
+  time: z.string().regex(/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/, "Please enter a valid time (HH:MM)"),
+  importance: z.string().refine(val => ["1", "2", "3"].includes(val), { message: "Importance must be between 1 and 3" }),
+  category: z.string().min(1, "Category is required"),
+  notes: z.string().max(1000).optional(),
+});
+
+function containsSuspiciousLink(text: string) {
+  return /https?:\/\//i.test(text);
+}
 
 interface TaskFormProps {
   isOpen: boolean;
@@ -47,58 +62,20 @@ export default function TaskForm({ isOpen, onClose, onAddTask, categories, defau
   }, [isOpen, defaultCategory, categories]);
 
   const validateForm = () => {
+    const result = taskSchema.safeParse(formData);
     const newErrors: Record<string, string> = {};
-
-    // Validate name
-    if (!formData.name.trim()) {
-      newErrors.name = "Task name is required";
-    } else if (formData.name.trim().length < 3) {
-      newErrors.name = "Task name must be at least 3 characters";
-    }
-
-    // Validate date
-    if (!formData.date) {
-      newErrors.date = "Date is required";
-    } else {
-      // Use user's local time for both selected and current
-      const now = new Date();
-      const [inputHour, inputMinute] = formData.time.split(":").map(Number);
-      const formDateParts = formData.date.split("-").map(Number);
-      const selectedDate = new Date(formDateParts[0], formDateParts[1] - 1, formDateParts[2], 0, 0, 0, 0);
-      if (selectedDate < new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0)) {
-        newErrors.date = "Date cannot be in the past";
-      } else if (selectedDate.getTime() === new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0).getTime()) {
-        // If today, check time
-        if (
-          inputHour < now.getHours() ||
-          (inputHour === now.getHours() && inputMinute <= now.getMinutes())
-        ) {
-          newErrors.time = "Time must be in the future";
-        }
+    if (!result.success) {
+      for (const err of result.error.errors) {
+        newErrors[err.path[0]] = err.message;
       }
     }
-
-    // Validate time
-    if (!formData.time) {
-      newErrors.time = "Time is required";
-    } else {
-      const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
-      if (!timeRegex.test(formData.time)) {
-        newErrors.time = "Please enter a valid time (HH:MM)";
-      }
+    // Link filtering
+    if (containsSuspiciousLink(formData.name)) {
+      newErrors.name = "Links are not allowed in the task name.";
     }
-
-    // Validate importance
-    const importance = parseInt(formData.importance);
-    if (isNaN(importance) || importance < 1 || importance > 3) {
-      newErrors.importance = "Importance must be between 1 and 3";
+    if (formData.notes && containsSuspiciousLink(formData.notes)) {
+      newErrors.notes = "Links are not allowed in notes.";
     }
-
-    // Validate category
-    if (!formData.category) {
-      newErrors.category = "Category is required";
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -112,7 +89,8 @@ export default function TaskForm({ isOpen, onClose, onAddTask, categories, defau
         setErrors({ category: "Please select a valid category" });
         return;
       }
-
+      // Sanitize notes
+      const sanitizedNotes = formData.notes ? DOMPurify.sanitize(formData.notes) : undefined;
       const task = new Task(
         formData.name.trim(),
         createDateFromString(formData.date),
@@ -120,7 +98,7 @@ export default function TaskForm({ isOpen, onClose, onAddTask, categories, defau
         parseInt(formData.importance),
         formData.category,
         selectedCategory.color,
-        formData.notes?.trim() || undefined
+        sanitizedNotes
       );
       
       onAddTask(task);

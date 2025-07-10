@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { X, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import ReCAPTCHA from "react-google-recaptcha";
+
+const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY || "";
 
 interface LoginModalProps {
   isOpen: boolean;
@@ -18,6 +21,7 @@ export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,15 +29,19 @@ export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps
     setError("");
     setMessage("");
 
+    if (!recaptchaToken) {
+      setError("Please complete the reCAPTCHA challenge.");
+      setLoading(false);
+      return;
+    }
+
     try {
       if (isSignUp) {
         const { data, error } = await supabase.auth.signUp({
           email,
           password,
         });
-
         if (error) throw error;
-
         if (data.user) {
           setMessage("Account created successfully! Please check your email to verify your account.");
           onLogin(data.user);
@@ -45,9 +53,7 @@ export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps
           email,
           password,
         });
-
         if (error) throw error;
-
         if (data.user) {
           onLogin(data.user);
           onClose();
@@ -67,6 +73,7 @@ export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps
     setError("");
     setMessage("");
     setShowPassword(false);
+    setRecaptchaToken(null);
   };
 
   if (!isOpen) return null;
@@ -142,6 +149,8 @@ export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps
               <p className="text-green-700 dark:text-green-300 text-sm">{message}</p>
             </div>
           )}
+
+          <ReCAPTCHA sitekey={RECAPTCHA_SITE_KEY} onChange={setRecaptchaToken} />
 
           <button
             type="submit"
