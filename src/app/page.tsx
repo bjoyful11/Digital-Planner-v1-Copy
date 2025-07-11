@@ -12,7 +12,6 @@ import CategoryManager from "@/components/forms/CategoryManager";
 import CalendarView from "@/components/CalendarView";
 import LoginModal from "@/components/auth/LoginModal";
 import UserMenu from "@/components/auth/UserMenu";
-import GroupOverlay from "@/components/GroupOverlay";
 
 export default function Home() {
   const [darkMode, setDarkMode] = useState(true);
@@ -26,7 +25,6 @@ export default function Home() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [isGroupOverlayOpen, setIsGroupOverlayOpen] = useState(false);
 
   // Check for existing session on mount
   useEffect(() => {
@@ -235,14 +233,6 @@ export default function Home() {
                 <Settings className="w-4 h-4 mr-2" />
                 Manage Categories
               </button>
-              {/* Group Button */}
-              <button
-                onClick={() => setIsGroupOverlayOpen(true)}
-                className="w-full flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-              >
-                <User className="w-4 h-4 mr-2" />
-                Groups
-              </button>
             </div>
           </div>
         </div>
@@ -392,9 +382,6 @@ export default function Home() {
           </main>
         </div>
       </div>
-
-      {/* Group Overlay Modal */}
-      <GroupOverlay isOpen={isGroupOverlayOpen} onClose={() => setIsGroupOverlayOpen(false)} />
 
       {/* Task Form Modal */}
       <TaskForm
