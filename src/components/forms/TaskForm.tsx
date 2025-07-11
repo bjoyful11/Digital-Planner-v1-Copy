@@ -65,8 +65,11 @@ export default function TaskForm({ isOpen, onClose, onAddTask, categories, defau
     const result = taskSchema.safeParse(formData);
     const newErrors: Record<string, string> = {};
     if (!result.success) {
-      for (const err of result.error.errors) {
-        newErrors[err.path[0]] = err.message;
+      for (const err of result.error.issues) {
+        const key = err.path[0];
+        if (typeof key === 'string') {
+          newErrors[key] = err.message;
+        }
       }
     }
     // Link filtering
