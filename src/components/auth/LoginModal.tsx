@@ -35,6 +35,25 @@ export default function LoginModal({ isOpen, onClose, onLogin }: LoginModalProps
       return;
     }
 
+    // Verify reCAPTCHA with backend
+    try {
+      const verifyRes = await fetch("/api/verify-recaptcha", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: recaptchaToken }),
+      });
+      const verifyData = await verifyRes.json();
+      if (!verifyData.success) {
+        setError("reCAPTCHA verification failed. Please try again.");
+        setLoading(false);
+        return;
+      }
+    } catch (err) {
+      setError("Error verifying reCAPTCHA. Please try again.");
+      setLoading(false);
+      return;
+    }
+
     try {
       if (isSignUp) {
         const { data, error } = await supabase.auth.signUp({
