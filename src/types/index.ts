@@ -79,6 +79,8 @@ export interface Category {
   color: string;
   icon: string;
   isDefault?: boolean; // To identify built-in categories
+  isCollaborative?: boolean; // If true, category is open to collaboration
+  sharedWith?: string[]; // Array of user emails or IDs for collaboration
 }
 
 export interface CategoryConfig {
