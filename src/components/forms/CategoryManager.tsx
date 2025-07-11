@@ -48,14 +48,18 @@ export default function CategoryManager({
   const [newCategory, setNewCategory] = useState({
     name: '',
     icon: '📚',
-    color: '#3B82F6'
+    color: '#3B82F6',
+    isCollaborative: false,
+    sharedWith: [] as string[],
   });
   
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [editForm, setEditForm] = useState({
     name: '',
     icon: '📚',
-    color: '#3B82F6'
+    color: '#3B82F6',
+    isCollaborative: false,
+    sharedWith: [] as string[],
   });
   
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -64,7 +68,7 @@ export default function CategoryManager({
   // Reset form when modal opens/closes
   useEffect(() => {
     if (!isOpen) {
-      setNewCategory({ name: '', icon: '📚', color: '#3B82F6' });
+      setNewCategory({ name: '', icon: '📚', color: '#3B82F6', isCollaborative: false, sharedWith: [] });
       setEditingCategory(null);
       setErrors({});
       setEditErrors({});
@@ -75,8 +79,11 @@ export default function CategoryManager({
     const result = categorySchema.safeParse(data);
     const newErrors: Record<string, string> = {};
     if (!result.success) {
-      for (const err of result.error.errors) {
-        newErrors[err.path[0]] = err.message;
+      for (const err of result.error.issues) {
+        const key = err.path[0];
+        if (typeof key === 'string') {
+          newErrors[key] = err.message;
+        }
       }
     }
     if (containsSuspiciousLink(data.name)) {
@@ -103,7 +110,9 @@ export default function CategoryManager({
         id: `category_${Date.now()}`,
         name: sanitizedName,
         icon: newCategory.icon,
-        color: newCategory.color
+        color: newCategory.color,
+        isCollaborative: newCategory.isCollaborative,
+        sharedWith: newCategory.sharedWith,
       };
       const updatedCategories = [...categories, category];
       if (user) {
@@ -117,7 +126,7 @@ export default function CategoryManager({
         saveCategories(updatedCategories);
         onCategoriesChange(updatedCategories);
       }
-      setNewCategory({ name: '', icon: '📚', color: '#3B82F6' });
+      setNewCategory({ name: '', icon: '📚', color: '#3B82F6', isCollaborative: false, sharedWith: [] });
       setErrors({});
     }
   };
@@ -142,7 +151,9 @@ export default function CategoryManager({
         ...editingCategory,
         name: sanitizedName,
         icon: editForm.icon,
-        color: editForm.color
+        color: editForm.color,
+        isCollaborative: editForm.isCollaborative,
+        sharedWith: editForm.sharedWith,
       };
       const updatedCategories = categories.map(cat => 
         cat.id === editingCategory.id ? updatedCategory : cat
@@ -189,7 +200,9 @@ export default function CategoryManager({
     setEditForm({
       name: category.name,
       icon: category.icon,
-      color: category.color
+      color: category.color,
+      isCollaborative: category.isCollaborative ?? false,
+      sharedWith: Array.isArray(category.sharedWith) ? category.sharedWith : [],
     });
   };
 
@@ -198,14 +211,14 @@ export default function CategoryManager({
     setEditErrors({});
   };
 
-  const handleInputChange = (field: string, value: string) => {
+  const handleInputChange = (field: string, value: any) => {
     setNewCategory(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: "" }));
     }
   };
 
-  const handleEditInputChange = (field: string, value: string) => {
+  const handleEditInputChange = (field: string, value: any) => {
     setEditForm(prev => ({ ...prev, [field]: value }));
     if (editErrors[field]) {
       setEditErrors(prev => ({ ...prev, [field]: "" }));
@@ -318,6 +331,31 @@ export default function CategoryManager({
                     </div>
                   )}
                 </div>
+              </div>
+              {/* Collaborative Toggle */}
+              <div>
+                <label className="flex items-center gap-2 mt-4">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(newCategory.isCollaborative)}
+                    onChange={e => handleInputChange('isCollaborative', e.target.checked)}
+                  />
+                  Collaborative Category
+                </label>
+                {newCategory.isCollaborative && (
+                  <div className="mt-2">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                      Invite Friends (comma-separated emails)
+                    </label>
+                    <input
+                      type="text"
+                      value={Array.isArray(newCategory.sharedWith) ? newCategory.sharedWith.join(', ') : ''}
+                      onChange={e => handleInputChange('sharedWith', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                      className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                      placeholder="friend1@email.com, friend2@email.com"
+                    />
+                  </div>
+                )}
               </div>
 
               <button
@@ -473,6 +511,31 @@ export default function CategoryManager({
                         </div>
                       )}
                     </div>
+                  </div>
+                  {/* Collaborative Toggle */}
+                  <div>
+                    <label className="flex items-center gap-2 mt-4">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(editForm.isCollaborative)}
+                        onChange={e => handleEditInputChange('isCollaborative', e.target.checked)}
+                      />
+                      Collaborative Category
+                    </label>
+                    {editForm.isCollaborative && (
+                      <div className="mt-2">
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                          Invite Friends (comma-separated emails)
+                        </label>
+                        <input
+                          type="text"
+                          value={Array.isArray(editForm.sharedWith) ? editForm.sharedWith.join(', ') : ''}
+                          onChange={e => handleEditInputChange('sharedWith', e.target.value.split(',').map(s => s.trim()).filter(Boolean))}
+                          className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white"
+                          placeholder="friend1@email.com, friend2@email.com"
+                        />
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex gap-3 pt-4">
