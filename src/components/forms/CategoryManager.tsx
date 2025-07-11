@@ -211,14 +211,14 @@ export default function CategoryManager({
     setEditErrors({});
   };
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = (field: string, value: string | boolean | string[]) => {
     setNewCategory(prev => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: "" }));
     }
   };
 
-  const handleEditInputChange = (field: string, value: any) => {
+  const handleEditInputChange = (field: string, value: string | boolean | string[]) => {
     setEditForm(prev => ({ ...prev, [field]: value }));
     if (editErrors[field]) {
       setEditErrors(prev => ({ ...prev, [field]: "" }));
