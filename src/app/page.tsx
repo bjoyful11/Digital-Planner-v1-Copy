@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Calendar, Plus, Settings, Sun, Moon, Clock, Edit2, Trash2, Check, User } from "lucide-react";
+import { Calendar, Plus, Settings, Sun, Moon, Edit2, Trash2, Check, User } from "lucide-react";
 import { Task, Category } from "@/types";
-import { loadCategories, getCategoryColor, getCategoryIcon, getCategoryName, formatDate } from "@/lib/utils";
+import { loadCategories, getCategoryColor, getCategoryName, formatDate } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
 import { loadUserTasks, saveTask, updateTask, deleteTask, loadUserCategories } from "@/lib/auth";
 import TaskForm from "@/components/forms/TaskForm";
@@ -336,14 +336,13 @@ export default function Home() {
                         <div className="flex items-center gap-4 text-sm text-gray-500 dark:text-gray-400">
                           <span>{formatDate(task.date)}</span>
                           <div className="flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
                             <span>{task.time}</span>
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <span className="text-sm text-gray-500 dark:text-gray-400">
-                          {getCategoryIcon(task.category, categories)}
+                          {/* Removed getCategoryIcon, icon display skipped */}
                         </span>
                         <button
                           onClick={() => {

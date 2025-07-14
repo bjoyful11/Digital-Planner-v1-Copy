@@ -7,6 +7,7 @@ import { saveCategories } from "@/lib/utils";
 import { saveCategory, updateCategory, deleteCategory } from "@/lib/auth";
 import { z } from "zod";
 import DOMPurify from "dompurify";
+import { supabase } from "@/lib/supabase";
 
 const categorySchema = z.object({
   name: z.string().min(2, "Category name must be at least 2 characters").max(20),
@@ -26,6 +27,11 @@ interface CategoryManagerProps {
   user?: { id: string; email?: string } | null;
 }
 
+// Extend Category type for modal use
+interface CategoryWithInvite extends Category {
+  invite_token?: string;
+  id: string;
+}
 
 
 const iconOptions = [
@@ -64,6 +70,11 @@ export default function CategoryManager({
   
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [editErrors, setEditErrors] = useState<Record<string, string>>({});
+  const [inviteLink, setInviteLink] = useState<string | null>(null);
+  const [shareModalCategory, setShareModalCategory] = useState<CategoryWithInvite | null>(null);
+  const [collaborators, setCollaborators] = useState<{ email: string; id: string }[]>([]);
+  const [collabLoading, setCollabLoading] = useState(false);
+  const [collabError, setCollabError] = useState("");
 
   // Reset form when modal opens/closes
   useEffect(() => {
@@ -72,8 +83,31 @@ export default function CategoryManager({
       setEditingCategory(null);
       setErrors({});
       setEditErrors({});
+      setInviteLink(null);
     }
   }, [isOpen]);
+
+  // Fetch collaborators for a category
+  const fetchCollaborators = async (category: Category) => {
+    setCollabLoading(true);
+    setCollabError("");
+    setCollaborators([]);
+    if (!category.sharedWith || category.sharedWith.length === 0) {
+      setCollabLoading(false);
+      return;
+    }
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, email')
+        .in('id', category.sharedWith);
+      if (error) setCollabError("Failed to load collaborators");
+      else setCollaborators(data || []);
+    } catch (e) {
+      setCollabError("Failed to load collaborators");
+    }
+    setCollabLoading(false);
+  };
 
   const validateCategory = (data: { name: string; icon: string; color: string }) => {
     const result = categorySchema.safeParse(data);
@@ -117,14 +151,31 @@ export default function CategoryManager({
       const updatedCategories = [...categories, category];
       if (user) {
         try {
-          await saveCategory(category, user.id);
+          const newCat = await saveCategory(category, user.id);
           onCategoriesChange(updatedCategories);
+          // If collaborative, send invite emails
+          if (newCategory.isCollaborative && newCat?.id) {
+            const emails = (newCategory.sharedWith || []).filter(x => x.includes('@'));
+            await Promise.all(
+              emails.map(email =>
+                fetch('/api/categories/invite', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ categoryId: newCat.id, email })
+                })
+              )
+            );
+            setInviteLink(null); // Optionally, you can set the invite link if you want to display it
+          } else {
+            setInviteLink(null);
+          }
         } catch (error) {
           console.error('Error saving category:', error);
         }
       } else {
         saveCategories(updatedCategories);
         onCategoriesChange(updatedCategories);
+        setInviteLink(null);
       }
       setNewCategory({ name: '', icon: '📚', color: '#3B82F6', isCollaborative: false, sharedWith: [] });
       setErrors({});
@@ -222,6 +273,22 @@ export default function CategoryManager({
     setEditForm(prev => ({ ...prev, [field]: value }));
     if (editErrors[field]) {
       setEditErrors(prev => ({ ...prev, [field]: "" }));
+    }
+  };
+
+  // Remove collaborator from category
+  const handleRemoveCollaborator = async (collabId: string) => {
+    if (!shareModalCategory) return;
+    const updatedIds = (shareModalCategory.sharedWith || []).filter(id => id !== collabId);
+    const { error } = await supabase
+      .from('categories')
+      .update({ shared_with: updatedIds })
+      .eq('id', shareModalCategory.id);
+    if (!error) {
+      setShareModalCategory({ ...shareModalCategory, sharedWith: updatedIds });
+      setCollaborators(collaborators.filter(c => c.id !== collabId));
+    } else {
+      alert('Failed to remove collaborator.');
     }
   };
 
@@ -382,8 +449,13 @@ export default function CategoryManager({
                   <div className="flex items-center gap-3">
                     <span className="text-2xl">{category.icon}</span>
                     <div>
-                      <h4 className="font-medium text-gray-900 dark:text-white">
+                      <h4 className="font-medium text-gray-900 dark:text-white flex items-center gap-2">
                         {category.name}
+                        {category.isCollaborative && (
+                          <span title="Collaborative" className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 ml-1">
+                            🤝 Collaborative
+                          </span>
+                        )}
                       </h4>
                       <div 
                         className="w-4 h-2 rounded-full mt-1"
@@ -393,6 +465,18 @@ export default function CategoryManager({
                   </div>
                   
                   <div className="flex items-center gap-2">
+                    {category.isCollaborative && (
+                      <button
+                        onClick={async () => {
+                          setShareModalCategory(category);
+                          await fetchCollaborators(category);
+                        }}
+                        className="p-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 transition-colors"
+                        title="Share category"
+                      >
+                        Share
+                      </button>
+                    )}
                     <button
                       onClick={() => startEditing(category)}
                       className="p-2 text-gray-500 hover:text-blue-600 dark:text-gray-400 dark:hover:text-blue-400 transition-colors"
@@ -559,6 +643,51 @@ export default function CategoryManager({
           )}
         </div>
       </div>
+      {/* Share Modal */}
+      {shareModalCategory && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold mb-4 text-gray-900 dark:text-white">Share Category</h3>
+            <div className="mb-2">
+              <span className="font-medium">Invite Link:</span>
+              <div className="mt-1 p-2 bg-gray-100 dark:bg-gray-700 rounded break-all text-sm">
+                {typeof window !== 'undefined' && shareModalCategory.invite_token && shareModalCategory.id ?
+                  `${window.location.origin}/join?token=${shareModalCategory.invite_token}&category=${shareModalCategory.id}` :
+                  'No invite link available.'}
+              </div>
+            </div>
+            <div className="mb-2">
+              <span className="font-medium">Collaborators:</span>
+              {collabLoading ? (
+                <div className="text-gray-500 text-sm">Loading...</div>
+              ) : collabError ? (
+                <div className="text-red-500 text-sm">{collabError}</div>
+              ) : (
+                <ul className="list-disc ml-5 text-sm">
+                  {collaborators.length === 0 && <li>No collaborators yet.</li>}
+                  {collaborators.map(c => (
+                    <li key={c.id} className="flex items-center justify-between">
+                      <span>{c.email}</span>
+                      <button
+                        onClick={() => handleRemoveCollaborator(c.id)}
+                        className="ml-2 px-2 py-0.5 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200"
+                      >
+                        Remove
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+            <button
+              onClick={() => setShareModalCategory(null)}
+              className="mt-4 w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 
